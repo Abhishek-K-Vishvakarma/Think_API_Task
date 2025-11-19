@@ -3,10 +3,16 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import router from "./routes/router.js";
+import cookieParser from "cookie-parser";
+import bodyParser from "body-parser";
 dotenv.config();
 const app = express();
-
-app.use(cors());
+app.use(cookieParser());
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
 app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URL, {

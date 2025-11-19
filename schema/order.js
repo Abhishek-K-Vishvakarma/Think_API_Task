@@ -1,13 +1,10 @@
-
 import mongoose from "mongoose";
-
 const OrderItemsSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: "Products", required: true},
   name : String,
   quantity: { type: Number, required: true, min: 1 },
   price: {type: Number, required: true},
 });
-
 const Order = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User_Admin", required: true},
   items: [OrderItemsSchema],
@@ -19,6 +16,16 @@ const Order = new mongoose.Schema({
    state: String,
    zipCode: String,
    country: String
+  },
+  paymentMethod: {
+    type: String,
+    enum: ["COD", "Razorpay", "Stripe", "PayPal"],
+    default: "Razorpay"
+  },
+  paymentStatus: {
+    type: String,
+    enum: ["Pending", "Paid", "Failed"],
+    default: "Pending"
   }
 }, {timestamps: true})
 
