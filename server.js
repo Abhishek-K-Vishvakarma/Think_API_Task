@@ -10,9 +10,13 @@ const app = express();
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: [
+    "http://localhost:5173",
+    "https://think-reactjs-ui.vercel.app"
+  ],
   credentials: true
 }));
+
 app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URL, {

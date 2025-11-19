@@ -6,8 +6,6 @@ import {
   GetAllCategories, GetAllSubcategories, GetAllProducts, DeleteCategory,
   DeleteSubCategory, DeleteProduct, PutCategory, PutSubCategory, PutProduct,
   Logout, getTokenUser, Addedinthecart, GetCartData, deleteCartData
-  // DelProductById,
-  // GetAllProducts, PutProduct, Lookup 
 } from "../controller/controller.js";
 import verifyToken from "../utils.js";
 const router = express.Router();

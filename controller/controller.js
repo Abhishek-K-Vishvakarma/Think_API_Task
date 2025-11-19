@@ -52,8 +52,8 @@ const Login = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "Lax",
+      secure: process.env.NODE_ENV == 'production',
+      sameSite: process.env.NODE_ENV == 'production' ? 'none' : 'lax',
       maxAge: 60 * 60 * 1000,
     });
     user.token = token;
@@ -73,8 +73,8 @@ const Logout = async (req, res) => {
     await User_Admin.findByIdAndUpdate(userId, { token: "" });
     res.clearCookie("token", {
       httpOnly: true,
-      secure: false,
-      sameSite: "Lax"
+      secure: process.env.NODE_ENV == 'production',
+      sameSite: process.env.NODE_ENV == 'production' ? 'none' : 'lax',
     });
     return res.status(200).json({
       message: "Logout successful",
