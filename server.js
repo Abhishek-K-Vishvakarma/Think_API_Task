@@ -12,7 +12,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "https://think-reactjs-ui.vercel.app"
+    "https://think-reactjs-gvg7fd82u-abhishek-s-projects-febf22af.vercel.app"
   ],
   credentials: true
 }));
