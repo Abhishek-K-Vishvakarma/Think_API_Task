@@ -10,7 +10,7 @@ import Payment from "../schema/payment.js";
 import dotenv from "dotenv";
 import Subcategory from "../schema/subcategory.js";
 import Addtocart from "../schema/addtocart.js";
-import ShippingAddress from "../schema/CustomerShippingAddress.js";
+import ShippingAddress from "../schema/shippingAddress.js";
 dotenv.config();
 // import mongoose from "mongoose";
 const UserRegistration = async (req, res) => {
