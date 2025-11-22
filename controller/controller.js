@@ -10,6 +10,7 @@ import Payment from "../schema/payment.js";
 import dotenv from "dotenv";
 import Subcategory from "../schema/subcategory.js";
 import Addtocart from "../schema/addtocart.js";
+import CustomerShippingAddress from "../schema/CustomerShippingAddress.js";
 dotenv.config();
 // import mongoose from "mongoose";
 const UserRegistration = async (req, res) => {
@@ -559,10 +560,10 @@ const GetCartData = async (req, res) => {
   }
 }
 
-const deleteCartData = async(req, res)=>{
+const deleteCartData = async (req, res) => {
   try {
     const id = req.params.id;
-    await Addtocart.findByIdAndDelete({_id: id});
+    await Addtocart.findByIdAndDelete({ _id: id });
     if (!id) return res.status(404).json({ message: "Cart data not found!" });
     res.status(200).json({ message: "Cart data getting successfully!", id });
   } catch (err) {
@@ -573,11 +574,63 @@ const deleteCartData = async(req, res)=>{
   }
 }
 
+const ShippingAddressofCustomer = async (req, res) => {
+  try {
+    const { userId, fullName, contactNumber, street, landMark, city, state, postalCode, country } = req.body;
+    if (!fullName || !contactNumber || !street || !city || !state || !postalCode || !country) {
+      return res.status(400).json({ message: "All fields are required!" });
+    }
+    const newShippingAddress = new CustomerShippingAddress({ fullName, contactNumber, street, landMark, city, state, postalCode, country, user: userId });
+    const saveShippingAddress = await newShippingAddress.save();
+    res.status(201).json({ message: "Shipping Addess created!", saveShippingAddress });
+  } catch (err) {
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: err.message
+    });
+  }
+}
+
+const GetShippingAddressByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId || userId.length !== 24) {
+      return res.status(400).json({
+        message: "Invalid userId format",
+        status: false
+      });
+    }
+    const shippingAddress = await CustomerShippingAddress.findOne({ user: userId });
+
+    if (!shippingAddress) {
+      return res.status(404).json({
+        message: "No Shipping Address found for this user. Please add one.",
+        status: false
+      });
+    }
+
+    res.status(200).json({
+      message: "Shipping Address retrieved successfully!",
+      data: shippingAddress,
+      status: true
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: err.message
+    });
+  }
+};
+
+
+
 export {
   UserRegistration, Login, AdminRegistration, Categories, Products,
   createOrder, GetUsersorAdmin, createPaymentOrder, paymentVerify, Subcategories,
   AllUsers, AllCategories, AllSubCategories, AllProducts, GetAllCategories,
   GetAllProducts, GetAllSubcategories, DeleteCategory, DeleteSubCategory,
   DeleteProduct, PutCategory, PutSubCategory, PutProduct, Logout, getTokenUser,
-  Addedinthecart, GetCartData, deleteCartData
+  Addedinthecart, GetCartData, deleteCartData, ShippingAddressofCustomer,
+  GetShippingAddressByUserId
 };
