@@ -171,7 +171,8 @@ const Subcategories = async (req, res) => {
     if (sub_name == "") return res.status(400).json({ message: "Subcategory name is required!" });
     const sub = await Subcategory.findOne({ sub_name });
     if (sub) return res.status(400).json({ message: "Subcategory name already exists!" });
-    const newSubcategory = new Subcategory({ sub_name, description, category: categoryId });
+    const file = req.file?.path;
+    const newSubcategory = new Subcategory({ sub_name, description, category: categoryId, sub_img_url: file });
     const saveSubcategory = await newSubcategory.save();
     res.status(201).json({ message: "Subcategory created successfully!", saveSubcategory });
   } catch (error) {
@@ -190,12 +191,14 @@ const Products = async (req, res) => {
     if (existProduct) {
       return res.status(400).json({ message: "Product name already exists!" });
     }
+    const file = req.file?.path;
     const newData = new Product({
       p_name,
       price,
       description,
       category: categoryId,
       subcategory: subcategoryId,
+      product_img_url: file
     });
 
     const saveData = await newData.save();

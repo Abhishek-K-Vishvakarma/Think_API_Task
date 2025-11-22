@@ -7,6 +7,7 @@ import {
   DeleteSubCategory, DeleteProduct, PutCategory, PutSubCategory, PutProduct,
   Logout, getTokenUser, Addedinthecart, GetCartData, deleteCartData
 } from "../controller/controller.js";
+import upload from "../clodinaryStorage.js";
 import verifyToken from "../utils.js";
 const router = express.Router();
 
@@ -15,11 +16,11 @@ router.get("/user_admin", GetUsersorAdmin);
 router.post("/login", Login);
 router.post("/adminSignup", AdminRegistration);
 router.post("/category", Categories);
-router.post("/product", Products);
+router.post("/product", upload.single('cloudimage'), Products);
 router.post("/order", createOrder);
 router.post("/payorder", createPaymentOrder);
 router.post("/payverify", paymentVerify);
-router.post("/subcategory", Subcategories);
+router.post("/subcategory", upload.single('cloudimage'), Subcategories);
 router.get("/getuserscount", AllUsers);
 router.get("/getcategoriescount", AllCategories);
 router.get("/getsubcategoriescount", AllSubCategories);

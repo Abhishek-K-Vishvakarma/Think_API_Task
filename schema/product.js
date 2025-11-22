@@ -10,6 +10,7 @@ const productSchema = new mongoose.Schema({
   subcategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Subcategory', required: true},
   description: {type: String},
   price: {type: Number, required: true},
+  product_img_url: String,
 }, {timestamps: true});
 
 export default mongoose.model("Products", productSchema);  
