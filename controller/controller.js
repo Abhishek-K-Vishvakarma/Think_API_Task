@@ -10,7 +10,7 @@ import Payment from "../schema/payment.js";
 import dotenv from "dotenv";
 import Subcategory from "../schema/subcategory.js";
 import Addtocart from "../schema/addtocart.js";
-import CustomerShippingAddress from "../schema/CustomerShippingAddress.js";
+import ShippingAddress from "../schema/CustomerShippingAddress.js";
 dotenv.config();
 // import mongoose from "mongoose";
 const UserRegistration = async (req, res) => {
@@ -580,7 +580,7 @@ const ShippingAddressofCustomer = async (req, res) => {
     if (!fullName || !contactNumber || !street || !city || !state || !postalCode || !country) {
       return res.status(400).json({ message: "All fields are required!" });
     }
-    const newShippingAddress = new CustomerShippingAddress({ fullName, contactNumber, street, landMark, city, state, postalCode, country, user: userId });
+    const newShippingAddress = new ShippingAddress({ fullName, contactNumber, street, landMark, city, state, postalCode, country, user: userId });
     const saveShippingAddress = await newShippingAddress.save();
     res.status(201).json({ message: "Shipping Addess created!", saveShippingAddress });
   } catch (err) {
@@ -600,7 +600,7 @@ const GetShippingAddressByUserId = async (req, res) => {
         status: false
       });
     }
-    const shippingAddress = await CustomerShippingAddress.findOne({ user: userId });
+    const shippingAddress = await ShippingAddress.findOne({ user: userId });
 
     if (!shippingAddress) {
       return res.status(404).json({
