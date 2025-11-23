@@ -11,11 +11,15 @@ const Order = new mongoose.Schema({
   orderDate: { type: Date, default: Date.now },
   status: { type: String, enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'], default: 'pending' },
   ShippingAddress : {
+   fullName: String,
+   contactNumber: Number,
    street : String,
    city: String,
+   landMark: String,
    state: String,
    zipCode: String,
-   country: String
+   country: String,
+   role: {type: String, default: "Customer"}
   },
   paymentMethod: {
     type: String,
