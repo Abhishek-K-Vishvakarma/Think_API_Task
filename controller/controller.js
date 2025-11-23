@@ -11,6 +11,8 @@ import dotenv from "dotenv";
 import Subcategory from "../schema/subcategory.js";
 import Addtocart from "../schema/addtocart.js";
 import ShippingAddress from "../schema/shippingAddress.js";
+import PDFDocument from "pdfkit";
+import Invoice from "../schema/invoice.js";
 dotenv.config();
 // import mongoose from "mongoose";
 const UserRegistration = async (req, res) => {
@@ -242,6 +244,7 @@ const createOrder = async (req, res) => {
         name: product.name,
         quantity: item.quantity,
         price: product.price,
+        totalPrice: totalAmount
       });
     }
 
@@ -321,7 +324,7 @@ const paymentVerify = async (req, res) => {
         razorpay_payment_id,
         razorpay_signature,
         status: "paid"
-      });
+      }, {new: true});
       res.status(200).json({
         success: true,
         message: "Payment verification successfully"
@@ -626,6 +629,115 @@ const GetShippingAddressByUserId = async (req, res) => {
 };
 
 
+const downloadInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 🟢 Order details
+    const order = await Orders.findById(id).populate("user");
+
+    if (!order)
+      return res.status(404).json({ message: "Order Not Found" });
+
+    // 🟢 Payment details (order._id se linkage)
+    const payment = await Payment.findOne({ order: order._id });
+
+    if (!payment)
+      return res.status(404).json({ message: "Payment Not Found" });
+
+    const doc = new PDFDocument({ margin: 40 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice_${ order._id }.pdf`
+    );
+
+    doc.pipe(res);
+
+    // ---------------------------------------------------
+    // HEADER
+    // ---------------------------------------------------
+    doc.fontSize(26).text("Payment Invoice", { align: "center" });
+    doc.moveDown();
+
+    // ---------------------------------------------------
+    // BASIC INFO
+    // ---------------------------------------------------
+    doc.fontSize(14).text(`Invoice ID: ${ order._id }`);
+    doc.text(`Razorpay Order: ${ payment.razorpay_order_id }`);
+    doc.text(`Payment ID: ${ payment.razorpay_payment_id || "N/A" }`);
+    doc.text(`Payment Status: ${ payment.status.toUpperCase() }`);
+    doc.text(`Payment Date: ${ new Date(payment.createdAt).toDateString() }`);
+    doc.text(`Currency: ${ payment.currency }`);
+    doc.moveDown();
+
+    // ---------------------------------------------------
+    // CUSTOMER INFO
+    // ---------------------------------------------------
+    doc.fontSize(16).text("Customer Details", { underline: true });
+    doc.moveDown(0.5);
+
+    doc.fontSize(14).text(`Name: ${ order.user.name }`);
+    doc.text(`Email: ${ order.user.email }`);
+    doc.text(`Phone: ${ order.ShippingAddress.contactNumber }`);
+    doc.moveDown();
+
+    // ---------------------------------------------------
+    // SHIPPING ADDRESS
+    // ---------------------------------------------------
+    doc.fontSize(16).text("Shipping Address", { underline: true });
+    doc.moveDown(0.5);
+
+    const a = order.ShippingAddress;
+    doc.fontSize(14).text(`${ a.fullName }`);
+    doc.text(`${ a.street }, ${ a.city }`);
+    doc.text(`Landmark: ${ a.landMark }`);
+    doc.text(`${ a.state } - ${ a.zipCode }`);
+    doc.text(`${ a.country }`);
+    doc.moveDown();
+
+    // ---------------------------------------------------
+    // ORDER ITEMS
+    // ---------------------------------------------------
+    doc.fontSize(16).text("Order Items", { underline: true });
+    doc.moveDown(0.5);
+
+    let totalAmount = 0;
+
+    order.items.forEach((item, index) => {
+      doc.fontSize(14).text(`${ index + 1 }. PRODUCT`);
+      doc.text(`Product: ${ item.product }`);
+      doc.text(`Quantity: ${ item.quantity }`);
+      doc.text(`Price: ₹${ item.price }`);
+      doc.text(`Total: ₹${ item.totalPrice }`);
+      doc.moveDown();
+
+      totalAmount += item.totalPrice;
+    });
+
+    // ---------------------------------------------------
+    // TOTAL
+    // ---------------------------------------------------
+    doc.fontSize(18).text("Total Payable Amount", { underline: true });
+    doc.fontSize(20).text(`₹${ totalAmount }`, { align: "left" });
+    doc.moveDown();
+
+    // ---------------------------------------------------
+    // FOOTER
+    // ---------------------------------------------------
+    doc.fontSize(15).text("Thank you for your purchase!", {
+      align: "center",
+    });
+
+    doc.end();
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 
 export {
   UserRegistration, Login, AdminRegistration, Categories, Products,
@@ -634,5 +746,5 @@ export {
   GetAllProducts, GetAllSubcategories, DeleteCategory, DeleteSubCategory,
   DeleteProduct, PutCategory, PutSubCategory, PutProduct, Logout, getTokenUser,
   Addedinthecart, GetCartData, deleteCartData, ShippingAddressofCustomer,
-  GetShippingAddressByUserId
+  GetShippingAddressByUserId, downloadInvoice
 };
