@@ -183,8 +183,9 @@ const Subcategories = async (req, res) => {
 
 const Products = async (req, res) => {
   try {
-    const { p_name, price, description, categoryId, subcategoryId } = req.body;
+    const { p_name, p_qty, price, description, categoryId, subcategoryId } = req.body;
     if (!p_name) return res.status(400).json({ message: "Product name required!" });
+    if (!p_qty) return res.status(400).json({ message: "Product Qty required!" });
     if (!price) return res.status(400).json({ message: "Product price required!" });
     if (!categoryId) return res.status(400).json({ message: "CategoryId required!" });
     if (!subcategoryId) return res.status(400).json({ message: "SubcategoryId required!" });
@@ -196,6 +197,7 @@ const Products = async (req, res) => {
     const newData = new Product({
       p_name,
       price,
+      p_qty,
       description,
       category: categoryId,
       subcategory: subcategoryId,
