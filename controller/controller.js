@@ -330,7 +330,7 @@ const paymentVerify = async (req, res) => {
         razorpay_payment_id,
         razorpay_signature,
         status: "paid"
-      }, {new: true});
+      }, { new: true });
       res.status(200).json({
         success: true,
         message: "Payment verification successfully"
@@ -634,6 +634,48 @@ const GetShippingAddressByUserId = async (req, res) => {
   }
 };
 
+const AllShip = async (req, res) => {
+  try {
+    const ship = await ShippingAddress.find({});
+    if (!ship) return res.status(404).json({ message: "Shipping data not found!", status_code: 404 });
+    res.status(200).json({ message: "Shipping data", ship });
+  } catch (err) {
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: err.message
+    });
+  }
+}
+
+const ShippingUpdate = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required!" });
+    }
+    const putShipping = await ShippingAddress.findOneAndUpdate(
+      { user: userId },         
+      { $set: req.body },
+      { new: true }
+    );
+
+    if (!putShipping) {
+      return res.status(404).json({ message: "Shipping address not found!" });
+    }
+    res.status(200).json({
+      message: "Shipping address updated successfully!",
+      putShipping
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: err.message
+    });
+  }
+};
+
+
 
 const downloadInvoice = async (req, res) => {
   try {
@@ -713,6 +755,7 @@ const downloadInvoice = async (req, res) => {
 
     order.items.forEach((item, index) => {
       doc.fontSize(14).text(`${ index + 1 }. PRODUCT`);
+      doc.text(`ProductName: ${ item.name }`);
       doc.text(`Product: ${ item.product }`);
       doc.text(`Quantity: ${ item.quantity }`);
       doc.text(`Price: ₹${ item.price }`);
@@ -752,5 +795,5 @@ export {
   GetAllProducts, GetAllSubcategories, DeleteCategory, DeleteSubCategory,
   DeleteProduct, PutCategory, PutSubCategory, PutProduct, Logout, getTokenUser,
   Addedinthecart, GetCartData, deleteCartData, ShippingAddressofCustomer,
-  GetShippingAddressByUserId, downloadInvoice
+  GetShippingAddressByUserId, downloadInvoice, ShippingUpdate, AllShip
 };

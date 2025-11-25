@@ -6,7 +6,8 @@ import {
   GetAllCategories, GetAllSubcategories, GetAllProducts, DeleteCategory,
   DeleteSubCategory, DeleteProduct, PutCategory, PutSubCategory, PutProduct,
   Logout, getTokenUser, Addedinthecart, GetCartData, deleteCartData,
-  ShippingAddressofCustomer, GetShippingAddressByUserId, downloadInvoice
+  ShippingAddressofCustomer, GetShippingAddressByUserId, downloadInvoice,
+  ShippingUpdate, AllShip
 } from "../controller/controller.js";
 import upload from "../clodinaryStorage.js";
 import verifyToken from "../utils.js";
@@ -43,6 +44,9 @@ router.delete("/deletecart/:id", deleteCartData);
 router.post("/shippingAddress", ShippingAddressofCustomer);
 router.get("/shipping/:userId", GetShippingAddressByUserId);
 router.get("/invoice/:id", downloadInvoice);
+router.put("/putshipping/:userId", ShippingUpdate);
+router.get("/allship", AllShip);
+
 
 router.get("/profile", verifyToken, (req, res) => {
   res.status(200).json({ message: "Users accessed!", users : {
