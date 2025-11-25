@@ -234,10 +234,13 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ message: "User ID and items are required." });
     }
     const orderItems = [];
+    console.log(orderItems)
     let totalAmount = 0;
 
     for (const item of items) {
       const product = await Product.findById(item.product);
+      console.log("product ::", product);
+      console.log("item ::", item);
       if (!product) {
         return res.status(404).json({ message: `Product not found: ${ item.product }` });
       }
@@ -247,10 +250,10 @@ const createOrder = async (req, res) => {
 
       orderItems.push({
         product: product._id,
-        name: product.name,
+        name: product.p_name,
         quantity: item.quantity,
         price: product.price,
-        totalPrice: totalAmount
+        totalPrice: itemTotal
       });
     }
 
@@ -680,16 +683,11 @@ const ShippingUpdate = async (req, res) => {
 const downloadInvoice = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // 🟢 Order details
     const order = await Orders.findById(id).populate("user");
-
-    if (!order)
-      return res.status(404).json({ message: "Order Not Found" });
-
-    // 🟢 Payment details (order._id se linkage)
+    console.log(order)
+    if (!order) return res.status(404).json({ message: "Order Not Found" });
+    console.log(order)
     const payment = await Payment.findOne({ order: order._id });
-
     if (!payment)
       return res.status(404).json({ message: "Payment Not Found" });
 
@@ -761,8 +759,8 @@ const downloadInvoice = async (req, res) => {
       doc.text(`Price: ₹${ item.price }`);
       doc.text(`Total: ₹${ item.totalPrice }`);
       doc.moveDown();
-
       totalAmount += item.totalPrice;
+      console.log(item);
     });
 
     // ---------------------------------------------------
