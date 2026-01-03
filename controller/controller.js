@@ -13,8 +13,8 @@ import Addtocart from "../schema/addtocart.js";
 import ShippingAddress from "../schema/shippingAddress.js";
 import PDFDocument from "pdfkit";
 import Invoice from "../schema/invoice.js";
+import { getLogger } from "../utils/rideLogger.js";
 dotenv.config();
-// import mongoose from "mongoose";
 const UserRegistration = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -226,21 +226,22 @@ const Products = async (req, res) => {
   }
 };
 
-
 const createOrder = async (req, res) => {
+  let logger;
+
   try {
     const { userId, items, ShippingAddress, paymentMethod, paymentStatus } = req.body;
+
     if (!userId || !items || items.length === 0) {
       return res.status(400).json({ message: "User ID and items are required." });
     }
+
     const orderItems = [];
-    console.log(orderItems)
     let totalAmount = 0;
 
     for (const item of items) {
       const product = await Product.findById(item.product);
-      console.log("product ::", product);
-      console.log("item ::", item);
+
       if (!product) {
         return res.status(404).json({ message: `Product not found: ${ item.product }` });
       }
@@ -256,7 +257,6 @@ const createOrder = async (req, res) => {
         totalPrice: itemTotal
       });
     }
-
     const newOrder = new Orders({
       user: userId,
       items: orderItems,
@@ -265,15 +265,20 @@ const createOrder = async (req, res) => {
       paymentMethod,
       paymentStatus
     });
-    const savedOrder = await newOrder.save();
 
+    const savedOrder = await newOrder.save();
+    logger = getLogger(savedOrder._id.toString());
+    logger.info(`Order created successfull || ProductName:${ savedOrder?.items[0]?.name } || ProductPrice:${ savedOrder?.items[0]?.price } || ProductQty:${ savedOrder?.items[0]?.quantity } || OrderStatus: Pending`);
     res.status(201).json({
       message: "Order created successfully!",
       order: savedOrder,
       totalAmount,
     });
+
   } catch (error) {
-    console.error("Order creation error:", error);
+    if (logger) {
+      logger.error("Order creation failed", error);
+    }
     res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
@@ -281,22 +286,32 @@ const createOrder = async (req, res) => {
   }
 };
 
+
 const instance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET
 })
 const createPaymentOrder = async (req, res) => {
+  let logger;
   try {
     const { amount, orderId, userId } = req.body;
-
+    logger = getLogger(orderId);
     const options = {
       amount: amount * 100,
       currency: "INR",
       receipt: `receipt_${ Date.now() }`,
     };
+    logger.info("Payment initialization started");
+    if (!amount || !orderId || !userId) {
+      logger.warn("Missing required payment fields");
+      return res.status(400).json({
+        success: false,
+        message: "Amount, OrderId and UserId are required",
+      });
+    }
+    logger.debug(`Creating Razorpay order`);
 
     const order = await instance.orders.create(options);
-
     const payment = new Payment({
       order: orderId,
       user: userId,
@@ -304,18 +319,17 @@ const createPaymentOrder = async (req, res) => {
       amount: amount,
       status: "created"
     });
-    console.log(payment);
     await payment.save();
-
     res.status(200).json({
       success: true,
       message: "Razorpay order created successfully",
       payment
     });
-
+    logger.info(`Payment record saved || PaymentStatus: Created`);
   } catch (error) {
-    console.log("RAZORPAY ERROR:", error);
-    res.status(500).json({
+    if (logger) {
+      logger.error("Payment creation failed", error);
+    } res.status(500).json({
       success: false,
       message: "Failed to create Razorpay order",
     });
@@ -323,8 +337,11 @@ const createPaymentOrder = async (req, res) => {
 };
 
 const paymentVerify = async (req, res) => {
+  let logger;
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const orderFind = await Orders.find().sort({ createdAt: -1 }).limit(1);
+    logger = getLogger(orderFind[0]?._id.toString());
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(body.toString()).digest("hex");
     const matchSignature = expectedSignature == razorpay_signature;
@@ -338,6 +355,7 @@ const paymentVerify = async (req, res) => {
         success: true,
         message: "Payment verification successfully"
       });
+      logger.info("Razorpay payment verification successfully", "Status : Paid");
     } else {
       await Payment.findOneAndUpdate(
         { razorpay_order_id },
@@ -347,9 +365,10 @@ const paymentVerify = async (req, res) => {
         success: false,
         message: "Payment verification failed"
       });
+      logger.warn("Razorpay payment verification Failed Status : Failed");
     };
   } catch (error) {
-    console.log("error :", error);
+    logger.error("Razorpay payment failed creation");
     res.status(500).json({ message: 'Internal Server error :', error: error.message, success: false });
   }
 }
@@ -416,7 +435,7 @@ const GetAllSubcategories = async (req, res) => {
 
 const GetAllProducts = async (req, res) => {
   try {
-    const AllProducts = await Product.find({});
+    const AllProducts = await Product.find({}).sort({ createdAt: -1 });
     res.status(200).json({ message: "All products got it!", data: AllProducts });
   } catch (error) {
     res.status(500).json({
@@ -657,7 +676,7 @@ const ShippingUpdate = async (req, res) => {
       return res.status(400).json({ message: "User ID is required!" });
     }
     const putShipping = await ShippingAddress.findOneAndUpdate(
-      { user: userId },         
+      { user: userId },
       { $set: req.body },
       { new: true }
     );
@@ -678,15 +697,11 @@ const ShippingUpdate = async (req, res) => {
   }
 };
 
-
-
 const downloadInvoice = async (req, res) => {
   try {
     const { id } = req.params;
     const order = await Orders.findById(id).populate("user");
-    console.log(order)
     if (!order) return res.status(404).json({ message: "Order Not Found" });
-    console.log(order)
     const payment = await Payment.findOne({ order: order._id });
     if (!payment)
       return res.status(404).json({ message: "Payment Not Found" });
@@ -760,7 +775,6 @@ const downloadInvoice = async (req, res) => {
       doc.text(`Total: ₹${ item.totalPrice }`);
       doc.moveDown();
       totalAmount += item.totalPrice;
-      console.log(item);
     });
 
     // ---------------------------------------------------
@@ -779,12 +793,9 @@ const downloadInvoice = async (req, res) => {
 
     doc.end();
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: error.message });
   }
 };
-
-
 
 export {
   UserRegistration, Login, AdminRegistration, Categories, Products,

@@ -2,10 +2,11 @@
   "name": "think_backed_test",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "type": "module"
+    "type": "module",
+    "start": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +25,9 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemon": "^3.1.11",
+    "or": "^0.2.0",
     "pdfkit": "^0.17.2",
-    "razorpay": "^2.9.6"
+    "razorpay": "^2.9.6",
+    "winston": "^3.19.0"
   }
 }
