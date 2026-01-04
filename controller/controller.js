@@ -14,6 +14,7 @@ import ShippingAddress from "../schema/shippingAddress.js";
 import PDFDocument from "pdfkit";
 import Invoice from "../schema/invoice.js";
 import { getLogger } from "../utils/rideLogger.js";
+import Log from "../schema/log.js";
 dotenv.config();
 const UserRegistration = async (req, res) => {
   try {
@@ -269,6 +270,11 @@ const createOrder = async (req, res) => {
     const savedOrder = await newOrder.save();
     logger = getLogger(savedOrder._id.toString());
     logger.info(`Order created successfull || ProductName:${ savedOrder?.items[0]?.name } || ProductPrice:${ savedOrder?.items[0]?.price } || ProductQty:${ savedOrder?.items[0]?.quantity } || OrderStatus: Pending`);
+    await Log.create({
+      level: "INFO",
+      message: `Order created successfull || ProductName:${ savedOrder?.items[0]?.name } || ProductPrice:${ savedOrder?.items[0]?.price } || ProductQty:${ savedOrder?.items[0]?.quantity } || OrderStatus: Pending`,
+      orderId: savedOrder._id.toString(),
+    });
     res.status(201).json({
       message: "Order created successfully!",
       order: savedOrder,
@@ -279,6 +285,11 @@ const createOrder = async (req, res) => {
     if (logger) {
       logger.error("Order creation failed", error);
     }
+    await Log.create({
+      level: "ERROR",
+      message: `Order creation failed: ${ error.message }`,
+      orderId: logger ? logger.orderId : null
+    });
     res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
@@ -302,15 +313,26 @@ const createPaymentOrder = async (req, res) => {
       receipt: `receipt_${ Date.now() }`,
     };
     logger.info("Payment initialization started");
+    await Log.create({
+      level: "INFO",
+      message: `Payment initialization started`,
+    });
     if (!amount || !orderId || !userId) {
       logger.warn("Missing required payment fields");
+      await Log.create({
+        level: "WARN",
+        message: `Missing required payment fields`,
+      });
       return res.status(400).json({
         success: false,
         message: "Amount, OrderId and UserId are required",
       });
     }
     logger.debug(`Creating Razorpay order`);
-
+    await Log.create({
+      level: "DEBUG",
+      message: `Creating Razorpay order`,
+    });
     const order = await instance.orders.create(options);
     const payment = new Payment({
       order: orderId,
@@ -326,9 +348,19 @@ const createPaymentOrder = async (req, res) => {
       payment
     });
     logger.info(`Payment record saved || PaymentStatus: Created`);
+    await Log.create({
+      level: "INFO",
+      message: `Payment record saved || PaymentStatus: Created`,
+      orderId: logger ? logger.orderId : null
+    });
   } catch (error) {
     if (logger) {
       logger.error("Payment creation failed", error);
+      await Log.create({
+        level: "ERROR",
+        message: `Payment creation failed ${ error.message }`,
+        orderId: logger ? logger.orderId : null
+      });
     } res.status(500).json({
       success: false,
       message: "Failed to create Razorpay order",
@@ -356,6 +388,10 @@ const paymentVerify = async (req, res) => {
         message: "Payment verification successfully"
       });
       logger.info("Razorpay payment verification successfully", "Status : Paid");
+      await Log.create({
+        level: "INFO",
+        message: `Razorpay payment verification successfully", "Status : Paid`,
+      });
     } else {
       await Payment.findOneAndUpdate(
         { razorpay_order_id },
@@ -366,9 +402,17 @@ const paymentVerify = async (req, res) => {
         message: "Payment verification failed"
       });
       logger.warn("Razorpay payment verification Failed Status : Failed");
+      await Log.create({
+        level: "WARN",
+        message: `Razorpay payment verification Failed Status : Failed`,
+      });
     };
   } catch (error) {
     logger.error("Razorpay payment failed creation");
+    await Log.create({
+      level: "ERROR",
+      message: `Razorpay payment failed creation ${ error.message }`,
+    });
     res.status(500).json({ message: 'Internal Server error :', error: error.message, success: false });
   }
 }
@@ -797,6 +841,17 @@ const downloadInvoice = async (req, res) => {
   }
 };
 
+// Logger find get apis (*.log);
+
+const logGetAPIs = async(req, res)=>{
+  try{
+     const findLogs = await Log.find().sort({createdAt: -1});
+     res.status(200).json({message: "All logs fetched!", logs: findLogs});
+  }catch(error){
+    res.status(500).json({message: "Internal Server error :", error : error.message});
+  }
+}
+
 export {
   UserRegistration, Login, AdminRegistration, Categories, Products,
   createOrder, GetUsersorAdmin, createPaymentOrder, paymentVerify, Subcategories,
@@ -804,5 +859,6 @@ export {
   GetAllProducts, GetAllSubcategories, DeleteCategory, DeleteSubCategory,
   DeleteProduct, PutCategory, PutSubCategory, PutProduct, Logout, getTokenUser,
   Addedinthecart, GetCartData, deleteCartData, ShippingAddressofCustomer,
-  GetShippingAddressByUserId, downloadInvoice, ShippingUpdate, AllShip
+  GetShippingAddressByUserId, downloadInvoice, ShippingUpdate, AllShip,
+  logGetAPIs
 };
