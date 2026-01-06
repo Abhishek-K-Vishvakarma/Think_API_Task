@@ -229,7 +229,7 @@ const Products = async (req, res) => {
 
 const createOrder = async (req, res) => {
   let logger;
-
+  let order_id = []
   try {
     const { userId, items, ShippingAddress, paymentMethod, paymentStatus } = req.body;
 
@@ -268,6 +268,7 @@ const createOrder = async (req, res) => {
     });
 
     const savedOrder = await newOrder.save();
+    order_id.push(savedOrder._id.toString());
     logger = getLogger(savedOrder._id.toString());
     logger.info(`Order created successfull || ProductName:${ savedOrder?.items[0]?.name } || ProductPrice:${ savedOrder?.items[0]?.price } || ProductQty:${ savedOrder?.items[0]?.quantity } || OrderStatus: Pending`);
     await Log.create({
@@ -288,7 +289,6 @@ const createOrder = async (req, res) => {
     await Log.create({
       level: "ERROR",
       message: `Order creation failed: ${ error.message }`,
-      orderId: logger ? logger.orderId : null
     });
     res.status(500).json({
       message: "Internal Server Error",
@@ -304,6 +304,7 @@ const instance = new Razorpay({
 })
 const createPaymentOrder = async (req, res) => {
   let logger;
+  let order_id = []
   try {
     const { amount, orderId, userId } = req.body;
     logger = getLogger(orderId);
@@ -370,9 +371,18 @@ const createPaymentOrder = async (req, res) => {
 
 const paymentVerify = async (req, res) => {
   let logger;
+  var ord_id = {};
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     const orderFind = await Orders.find().sort({ createdAt: -1 }).limit(1);
+    const logFind = await Log.find().sort({ createdAt: -1 }).limit(1);
+    const log_date_time = logFind[0].createdAt;
+    // date and time like Date: 2026-01-06 and Time: 11:20 AM 
+    const date_body_in_IST = new Date(log_date_time).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour12: false,
+    });
+    ord_id["orderId"] = orderFind[0]?._id.toString();
     logger = getLogger(orderFind[0]?._id.toString());
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(body.toString()).digest("hex");
@@ -405,13 +415,16 @@ const paymentVerify = async (req, res) => {
       await Log.create({
         level: "WARN",
         message: `Razorpay payment verification Failed Status : Failed`,
+        orderId: ord_id?.orderId
       });
+      await Log.findByIdAndUpdate({ _id: logFind[0]?._id.toString() }, { $set: { createdAt: date_body_in_IST } }, { new: true });
     };
   } catch (error) {
     logger.error("Razorpay payment failed creation");
     await Log.create({
       level: "ERROR",
       message: `Razorpay payment failed creation ${ error.message }`,
+      orderId: ord_id?.orderId
     });
     res.status(500).json({ message: 'Internal Server error :', error: error.message, success: false });
   }
@@ -843,12 +856,12 @@ const downloadInvoice = async (req, res) => {
 
 // Logger find get apis (*.log);
 
-const logGetAPIs = async(req, res)=>{
-  try{
-     const findLogs = await Log.find().sort({createdAt: -1});
-     res.status(200).json({message: "All logs fetched!", logs: findLogs});
-  }catch(error){
-    res.status(500).json({message: "Internal Server error :", error : error.message});
+const logGetAPIs = async (req, res) => {
+  try {
+    const findLogs = await Log.find().sort({ createdAt: -1 });
+    res.status(200).json({ message: "All logs fetched!", logs: findLogs });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server error :", error: error.message });
   }
 }
 
