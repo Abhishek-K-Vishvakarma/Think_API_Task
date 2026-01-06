@@ -4,7 +4,7 @@ const logSchema = new mongoose.Schema({
   level: String,
   message: String,
   orderId: String,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: String
 });
 
 export default mongoose.model("Log", logSchema);
